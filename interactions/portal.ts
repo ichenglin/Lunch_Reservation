@@ -51,16 +51,30 @@ export default class LunchReservationPortal {
         for (let item_index = 0; item_index < choice_titles.length; item_index++) {
             const item_title     = (choice_titles   .get(item_index)    ?.children[2] as any).data as string;
             const item_calorie   = (choice_calories .get(item_index + 1)?.children[0] as any).data as string;
-            const item_available = choice_availables.get(item_index)    ?.attribs.value            as string;
+            let   item_available = choice_availables.get(item_index)    ?.attribs.value            as string | number;
             const item_selection = choice_selections.get(item_index)    ?.attribs.onclick          as string;
+            if (item_available === "無限量")            item_available = Infinity;
+            if (item_available === "已額滿/No Vacancy") item_available = 0;
             day_choices.push({
                 id:        parseInt((item_selection.match(/^window\.location\.href = 'OrderApply\.aspx\?UID=(\d{5})/) as RegExpMatchArray)[1]),
                 name:      item_title,
                 calorie:   parseInt((item_calorie.match(/熱量：(\d+)大卡/) as RegExpMatchArray)[1]),
-                available: (item_available === "無限量") ? Infinity : parseInt((item_available.match(/^可選量：(\d+)$/) as RegExpMatchArray)[1])
+                available: (typeof(item_available) === "number") ? item_available : parseInt((item_available.match(/^可選量：(\d+)$/) as RegExpMatchArray)[1])
             });
         }
         return day_choices;
+    }
+
+    async get_all(): Promise<{date: string, choices: LunchReservationLunch[]}[]> {
+        const portal_dates = await this.get_dates();
+        const portal_choices: (Promise<LunchReservationLunch[]> | LunchReservationLunch[])[] = [];
+        for (let date_index = 0; date_index < portal_dates.length; date_index++) {
+            const loop_date = portal_dates[date_index];
+            portal_choices.push(this.get_choices(loop_date));
+        }
+        await Promise.all(portal_choices);
+        for (let date_index = 0; date_index < portal_dates.length; date_index++) await (portal_choices[date_index] as Promise<LunchReservationLunch[]>).then(date_choices => portal_choices[date_index] = date_choices);
+        return portal_choices.map((choices_content, date_index) => ({date: portal_dates[date_index], choices: choices_content as unknown as LunchReservationLunch[]}));
     }
 
 }
