@@ -49,21 +49,22 @@ export default class LunchReservationPortal {
     }
 
     async get_choices(day_date: string): Promise<LunchReservationLunch[]> {
-        const day_html        = await fetch(`https://pos.kcis.ntpc.edu.tw/Order.aspx?DT=${day_date}`, {headers: {"cookie": this.portal_cookies.export_all()}}).then(response => response.text());
-        const day_menu        = cheerio.load(day_html);
-        const choice_titles   = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > h3");
-        const choice_calories = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > p");
-        const choice_labels   = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > input");
+        const day_html          = await fetch(`https://pos.kcis.ntpc.edu.tw/Order.aspx?DT=${day_date}`, {headers: {"cookie": this.portal_cookies.export_all()}}).then(response => response.text());
+        const day_menu          = cheerio.load(day_html);
+        const choice_ids        = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > img");
+        const choice_titles     = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > h3");
+        const choice_calories   = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > p");
+        const choice_availables = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > input");
         const day_choices: LunchReservationLunch[] = [];
         for (let item_index = 0; item_index < choice_titles.length; item_index++) {
-            const item_title     = (choice_titles   .get(item_index)        ?.children[2] as any).data as string;
-            const item_calorie   = (choice_calories .get(item_index + 1)    ?.children[0] as any).data as string;
-            let   item_available = choice_labels    .get(item_index * 2)    ?.attribs.value            as string | number;
-            const item_selection = choice_labels    .get(item_index * 2 + 1)?.attribs.onclick          as string;
+            const item_id        = choice_ids        .get(item_index)        ?.attribs.src              as string;
+            const item_title     = (choice_titles    .get(item_index)        ?.children[2] as any).data as string;
+            const item_calorie   = (choice_calories  .get(item_index + 1)    ?.children[0] as any).data as string;
+            let   item_available = choice_availables .get(item_index * 2)    ?.attribs.value            as string | number;
             if (item_available === "無限量")            item_available = Infinity;
             if (item_available === "已額滿/No Vacancy") item_available = 0;
             day_choices.push({
-                id:        (item_selection.match(/^window\.location\.href = 'OrderApply\.aspx\?UID=(\d{5})/) as RegExpMatchArray)[1],
+                id:        (item_id.match(/^GetIMAGE\.ashx\?IMAGEID=(\d{5})/) as RegExpMatchArray)[1],
                 name:      item_title,
                 calorie:   parseInt((item_calorie.match(/熱量：(\d+)大卡/) as RegExpMatchArray)[1]),
                 available: (typeof(item_available) === "number") ? item_available : parseInt((item_available.match(/^可選量：(\d+)$/) as RegExpMatchArray)[1])
