@@ -4,11 +4,11 @@ export default class Cookies {
 
     constructor() {}
 
-    set(cookie_key: string, cookie_value: string): void {
+    public set(cookie_key: string, cookie_value: string): void {
         this.cookie_list.set(cookie_key, cookie_value);
     }
 
-    import_set_cookie(set_cookie_string: string): void {
+    public import_set_cookie(set_cookie_string: string): void {
         const set_cookie_strings = set_cookie_string.split(/HttpOnly,\s*/g);
         for (let set_cookie_index = 0; set_cookie_index < set_cookie_strings.length; set_cookie_index++) {
             const set_cookie_parameters = set_cookie_strings[set_cookie_index].match(/^([^=]+)=([\w\d]+);/);
@@ -17,11 +17,11 @@ export default class Cookies {
         }
     }
 
-    get(cookie_key: string): string | undefined {
+    public get(cookie_key: string): string | undefined {
         return this.cookie_list.get(cookie_key);
     }
 
-    export_all(): string {
+    public export_all(): string {
         const cookie_strings: string[] = [];
         this.cookie_list.forEach((cookie_value: string, cookie_key: string) => cookie_strings.push(`${cookie_key}=${cookie_value}`));
         return cookie_strings.join("; ");

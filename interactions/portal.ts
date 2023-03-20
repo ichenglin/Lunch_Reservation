@@ -12,7 +12,7 @@ export default class LunchReservationPortal {
         this.portal_cookies     = new Cookies();
     }
 
-    async login(user_credentials: LunchReservationLoginCredentials): Promise<void> {
+    public async login(user_credentials: LunchReservationLoginCredentials): Promise<void> {
         // prefetch for viewstate credentials
         const prefetch_response = await fetch("https://pos.kcis.ntpc.edu.tw/Default.aspx");
         const viewstate_form = cheerio.load(await prefetch_response.text())("#ctl00");
@@ -32,12 +32,20 @@ export default class LunchReservationPortal {
         this.portal_credentials = user_credentials;
     }
 
-    async login_last_session(): Promise<void> {
+    public async login_last_session(): Promise<void> {
         if (this.portal_credentials === undefined) return;
         await this.login(this.portal_credentials);
     }
 
-    async get_dates(): Promise<string[]> {
+    public async set_choice(choice_id: string): Promise<boolean> {
+        const choice_request = await fetch(`https://pos.kcis.ntpc.edu.tw/OrderApply.aspx?UID=${choice_id}`, {redirect: "manual", headers: {"cookie": this.portal_cookies.export_all()}});
+        const choice_html    = await fetch(choice_request.headers.get("location") as string, {headers: {"cookie": this.portal_cookies.export_all()}}).then(response => response.text());
+        // client-side javascript is not executed, can't select element for order status
+        const choice_result = choice_html.match(/MessageBox\('([^']*)'\);/);
+        return choice_result !== null && (choice_result[1] === "更新餐點成功!" || choice_result[1] === "新增餐點成功!");
+    }
+
+    public async get_dates(): Promise<string[]> {
         const portal_html = await fetch("https://pos.kcis.ntpc.edu.tw/CheckOrder.aspx", {headers: {"cookie": this.portal_cookies.export_all()}}).then(response => response.text());
         const portal_items = cheerio.load(portal_html)("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > h3");
         const portal_dates: string[] = [];
@@ -48,7 +56,7 @@ export default class LunchReservationPortal {
         return portal_dates;
     }
 
-    async get_choices(day_date: string): Promise<LunchReservationLunch[]> {
+    public async get_choices(day_date: string): Promise<LunchReservationLunch[]> {
         const day_html          = await fetch(`https://pos.kcis.ntpc.edu.tw/Order.aspx?DT=${day_date}`, {headers: {"cookie": this.portal_cookies.export_all()}}).then(response => response.text());
         const day_menu          = cheerio.load(day_html);
         const choice_ids        = day_menu("#fh5co-main > div > div > div.col-md-8.col-md-push-4 > img");
@@ -73,7 +81,7 @@ export default class LunchReservationPortal {
         return day_choices;
     }
 
-    async get_all(): Promise<{date: string, choices: LunchReservationLunch[]}[]> {
+    public async get_all(): Promise<{date: string, choices: LunchReservationLunch[]}[]> {
         const portal_dates = await this.get_dates();
         const portal_choices: (Promise<LunchReservationLunch[]> | LunchReservationLunch[])[] = [];
         for (let date_index = 0; date_index < portal_dates.length; date_index++) {

@@ -12,12 +12,12 @@ export default class Webhook {
         this.webhook_url      = webhook_url;
     }
 
-    set_profile(webhook_username: string, webhook_avator: string): void{
+    public set_profile(webhook_username: string, webhook_avator: string): void{
         this.webhook_username = webhook_username;
         this.webhook_avator   = webhook_avator;
     }
 
-    async send(webhook_title: string, webhook_message: string, webhook_color: string, webhook_fields?: {name: string, value: string}[]): Promise<void> {
+    public async send(webhook_title: string, webhook_message: string, webhook_color: string, webhook_fields?: {name: string, value: string}[]): Promise<void> {
         const webhook_body = {
             username:   this.webhook_username,
             avatar_url: this.webhook_avator,
